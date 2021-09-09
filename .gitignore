@@ -2,6 +2,5 @@
 __pycache__/
 venv/
 
-log.txt
-map_init.jpg
-map_normalized.jpg
+
+log/*

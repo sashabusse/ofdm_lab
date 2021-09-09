@@ -4,15 +4,17 @@ from Utility import print_bit_array, print_iq_points
 import sys
 rnd.seed(1)
 
-log_to_file = True
-log_max_cells = 16
-log_file_name = "log.txt"
-if log_to_file:
-    sys.stdout = open(log_file_name, 'w')
 
 #constellation = "BPSK"
 #constellation = "QPSK"
 constellation = "16-QAM"
+
+log_to_file = True
+log_max_cells = 16
+log_file_name = "log/" + constellation + ".txt"
+if log_to_file:
+    sys.stdout = open(log_file_name, 'w')
+
 
 data_file_name = 'data/War_and_Peace.doc'
 QAM_cells = 10

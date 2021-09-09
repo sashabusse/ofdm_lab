@@ -69,14 +69,14 @@ def mapping(input_bit_buffer, constellation):
     order = get_constellation_order(constellation)
     save_constellation_plot(symbol_2_iq_map, order,
                             "mapping constellation (not normalized)",
-                            "map_init.jpg")
+                            "log/" + constellation + ".jpg")
 
     # normalize constellation
     norm = constellation_norm(symbol_2_iq_map)
     symbol_2_iq_map = symbol_2_iq_map/norm
     save_constellation_plot(symbol_2_iq_map, order,
                             "mapping constellation (normalized / norm = {0:0.2f})".format(norm),
-                            "map_normalized.jpg")
+                            "log/" + constellation + "_normalized.jpg")
 
     # generate iq points based on chosen constellation map
     iq_points = []
