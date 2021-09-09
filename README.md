@@ -1,5 +1,7 @@
 # ofdm_lab  
-BitArray --container for bits with useful methods  
+BitArray.py --container for bits with useful methods  
+Utility.py --gray code generation and output functions
+lab1.py --realizations of methods in first lab
   
 reqirements.txt for needed libs  
   
