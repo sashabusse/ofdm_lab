@@ -109,8 +109,7 @@ def error_check(input_bit_buffer, output_bit_buffer):
     assert input_bit_buffer.size() == output_bit_buffer.size(), "len of input and output are different"
     err = 0
     for i in range(input_bit_buffer.size()):
-        if input_bit_buffer.get_bit(i) ^ output_bit_buffer.get_bit(i):
-            err += 1
+        err += input_bit_buffer.get_bit(i) ^ output_bit_buffer.get_bit(i)
     return err/input_bit_buffer.size()
 
 
