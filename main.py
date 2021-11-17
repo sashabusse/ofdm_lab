@@ -1,13 +1,17 @@
 import random as rnd
-from lab1 import read_file, mapping, demapping, error_check, get_constellation_order
-from lab2_ofdm import OfdmConfig, multiplex_to_ofdm, demultiplex_from_ofdm, randomize
-from Utility import print_bit_array, print_iq_points
 import numpy as np
-import sys
+from matplotlib import pyplot as plt
+from ofdm_lib.BitArray import read_file
+from ofdm_lib.map_demap import mapping, demapping, get_constellation_order
+from ofdm_lib.ofdm_multiplex_demultiplex import OfdmConfig, multiplex_to_ofdm, demultiplex_from_ofdm
+from ofdm_lib.randomizer import randomize
+from ofdm_lib.Utility import calc_ber
+from ofdm_lib.channel import ChannelConfig, agwn_cmplx, freq_shift, time_delay, multi_path
+from transmission import signal_transmission
 rnd.seed(1)
 
-
-constellation = "BPSK"
+# << configuration >> ----------------------------------------------------
+#constellation = "BPSK"
 #constellation = "QPSK"
 #constellation = "16-QAM"
 
@@ -15,66 +19,49 @@ ofdm_cfg = OfdmConfig(
     n_fft=1024,
     n_carrier=400,
     t_guard_div=8,
-    frame_sz=20
+    frame_sz=100,
+    pilot_percent=0.2
 )
-
-QAM_cells = ofdm_cfg.n_carrier * ofdm_cfg.frame_sz
-buffer_sz_bits = QAM_cells * get_constellation_order(constellation)
 
 use_randomize = True
 rnd_init_state = [1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0]
 
+chan_cfg = ChannelConfig(
+    snr=30,
+    freq_shift=0/ofdm_cfg.n_fft,  # from (-30 ... 30)/n_fft
+    time_delay=0,
+    multipath=[[0, 1]]
+)
+# channel config
 
-log_to_file = False
-log_max_cells = int(16)
-log_file_name = "log/" + constellation + ".txt"
-if log_to_file:
-    sys.stdout = open(log_file_name, 'w')
+# --------------------------------------------------------------------------
 
+fig, ax = plt.subplots(1, 1)
 
-data_file_name = 'data/War_and_Peace.doc'
-input_bit_buffer = read_file(data_file_name, buffer_sz_bits)
+for constellation in ["BPSK", "QPSK", "16-QAM"]:
+    # << read data to transmit >> --------------------------------------------
+    QAM_cells = ofdm_cfg.n_carrier * ofdm_cfg.frame_sz
+    buffer_sz_bits = QAM_cells * get_constellation_order(constellation)
+    data_file_name = 'data/War_and_Peace.doc'
+    input_bit_buffer = read_file(data_file_name, buffer_sz_bits)
+    # --------------------------------------------------------------------------
 
-print("input bit stream:")
-print_bit_array(input_bit_buffer, min(QAM_cells, log_max_cells), get_constellation_order(constellation))
-print()
+    snr_list = np.arange(0, 30, 1)
+    ber = []
+    for snr in snr_list:
+        chan_cfg.snr = snr
+        cur_ber, signals = signal_transmission(
+            input_bit_buffer, constellation, ofdm_cfg, chan_cfg,
+            use_randomize, rnd_init_state)
+        ber.append(cur_ber)
 
-# randomize if needed
-if use_randomize:
-    tx_rand_bit_buffer = randomize(input_bit_buffer, rnd_init_state)
-else:
-    tx_rand_bit_buffer = input_bit_buffer
+    ax.set_yscale('log')
+    ax.plot(snr_list, np.array(ber))
+    ax.set_xlabel("SNR dB")
+    ax.set_ylabel("BER")
+    ax.set_ylim((1e-4, 1))
+    ax.grid(True)
 
-tx_iq_points = mapping(tx_rand_bit_buffer, constellation)
+ax.legend(["BPSK", "QPSK", "16-QAM"])
+plt.show()
 
-print("TX IQ points:")
-print_iq_points(tx_iq_points[:min(QAM_cells, log_max_cells)])
-print()
-
-tx_ofdm_iq_points = multiplex_to_ofdm(tx_iq_points, ofdm_cfg)
-
-# канал Lab 4-5
-# noiseData = Noise (Tx_OFDM_Signal, SNR); %lab 4 | добавление абгш
-# freq_shifted_data = frequency_shift(noiseData, Freq_shift, N_fft,T_guard); % lab 4 | частотный сдвиг
-# multi_data = multi_path(freq_shifted_data,channel); % lab 4 | многолучевой прием
-# time_shifted_data = delay(multi_data,Time_delay); % lab 4
-
-# приемник
-rx_ofdm_iq_points = tx_ofdm_iq_points
-rx_IQ_points = demultiplex_from_ofdm(rx_ofdm_iq_points, ofdm_cfg)
-
-print("RX IQ points")
-print_iq_points(rx_IQ_points[:min(QAM_cells, log_max_cells)])
-print()
-
-rx_rand_bit_buffer = demapping(rx_IQ_points, constellation)
-output_bit_buffer = randomize(rx_rand_bit_buffer, rnd_init_state)
-
-print("output bit buffer:")
-print_bit_array(output_bit_buffer, min(QAM_cells, log_max_cells), get_constellation_order(constellation))
-print()
-
-# deranddata_delay = derandomizator (finishBits_delay, register)
-probability = error_check(input_bit_buffer, output_bit_buffer)
-
-print("bit error probability:", probability)

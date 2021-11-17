@@ -38,3 +38,19 @@ class BitArray:
 
         return result
 
+
+# read buffer_sz_bits bits from file
+def read_file(file_name, buffer_sz_bits):
+    bit_arr = BitArray(buffer_sz_bits)
+    bytes_to_read = int(buffer_sz_bits/8)
+    if buffer_sz_bits % 8:
+        bytes_to_read += 1
+
+    fd = open(file_name, "rb")
+    data = fd.read(bytes_to_read)
+    fd.close()
+
+    bit_arr.init_from_bytes(data)
+    return bit_arr
+
+

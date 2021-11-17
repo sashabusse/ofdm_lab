@@ -1,21 +1,5 @@
 import numpy as np
-from Utility import gray_code, save_constellation_plot
-from BitArray import BitArray
-
-
-# read buffer_sz_bits bits from file
-def read_file(file_name, buffer_sz_bits):
-    bit_arr = BitArray(buffer_sz_bits)
-    bytes_to_read = int(buffer_sz_bits/8)
-    if buffer_sz_bits % 8:
-        bytes_to_read += 1
-
-    fd = open(file_name, "rb")
-    data = fd.read(bytes_to_read)
-    fd.close()
-
-    bit_arr.init_from_bytes(data)
-    return bit_arr
+from ofdm_lib.BitArray import BitArray
 
 
 def get_constellation_order(constellation):
@@ -34,8 +18,8 @@ def get_symbol_2_iq_map(constellation):
     # hardcode values for BPSK and QPSK
     if constellation == "BPSK":
         return np.array([
-            -1,
-            1
+            -1. + 0.j,
+            1. + 0.j
         ])
     if constellation == "QPSK":
         return np.array([
@@ -62,21 +46,21 @@ def constellation_norm(constellation_map):
     return np.sqrt( np.average(np.abs(constellation_map)**2) )
 
 
+def constellation_max_amp(constellation):
+    const_map = get_symbol_2_iq_map(constellation)
+    const_map /= constellation_norm(const_map)
+    return np.max(np.abs(const_map))
+
+
 def mapping(input_bit_buffer, constellation):
     # get chosen constellation map
     symbol_2_iq_map = get_symbol_2_iq_map(constellation)
 
     order = get_constellation_order(constellation)
-    save_constellation_plot(symbol_2_iq_map, order,
-                            "mapping constellation (not normalized)",
-                            "log/" + constellation + ".jpg")
 
     # normalize constellation
     norm = constellation_norm(symbol_2_iq_map)
     symbol_2_iq_map = symbol_2_iq_map/norm
-    save_constellation_plot(symbol_2_iq_map, order,
-                            "mapping constellation (normalized / norm = {0:0.2f})".format(norm),
-                            "log/" + constellation + "_normalized.jpg")
 
     # generate iq points based on chosen constellation map
     iq_points = []
@@ -105,15 +89,15 @@ def demapping(rx_iq_points, constellation):
     return output_bit_buffer
 
 
-def error_check(input_bit_buffer, output_bit_buffer):
-    assert input_bit_buffer.size() == output_bit_buffer.size(), "len of input and output are different"
-    err = 0
-    for i in range(input_bit_buffer.size()):
-        err += input_bit_buffer.get_bit(i) ^ output_bit_buffer.get_bit(i)
-    return err/input_bit_buffer.size()
+def gray_code(length_bits):
+    res = np.zeros(2**length_bits, int)
+    for bit_ind in range(0, length_bits):
+        for i in range(0, 2**length_bits):
+            mirror = int(i/(2**(bit_ind + 1))) % 2
+            val = int(i/(2**bit_ind)) % 2
+            res[i] |= (val ^ mirror) << bit_ind
 
-
-
+    return res
 
 
 
